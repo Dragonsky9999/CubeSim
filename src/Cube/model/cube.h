@@ -6,12 +6,17 @@
 #include "src/Cube/transform/cubelet.h"
 #include "src/Color/color.h"
 #include "src/Axis/axis.h"
+#include "src/Cube/face/face.h"
+#include "src/Cube/Move/move.h"
+
 
 class Cube {
 private:
     COLOR FACE_COLORS[6];
     CubeState STATE;
     std::vector<Cubelet> CUBELETS;
+
+    void applyMove(const Move& move);
 public:
     Cube(int n = 3);
 
@@ -28,4 +33,6 @@ public:
     void setPieces(std::vector<Piece> PIECES);
     void syncToCubelets();
     void rotate(Axis axis, int layer, int dir);
+    void move(std::string moveStr);
+    void moves(std::vector<std::string>& moveStrs);
 };

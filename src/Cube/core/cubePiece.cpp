@@ -38,8 +38,6 @@ void Piece::rotate(int N, Axis axis, int dir) {
     // ori の更新
     // edge
     if (type == "edge") {
-        using namespace std;
-        cout << "Pos(" << gridPos[0] << "," << gridPos[1] << "," << gridPos[2] << "," <<  "ori: " << ori <<  endl;
         if ((axis == Axis::X && (gridPos[(int)Axis::X] != 0 && gridPos[(int)Axis::X] != N - 1)) || (axis == Axis::Y && (gridPos[(int)Axis::Y] != 0 && gridPos[(int)Axis::Y] != N - 1)) || axis == Axis::Z) {
             ori = (ori + 1) % 2;
         }

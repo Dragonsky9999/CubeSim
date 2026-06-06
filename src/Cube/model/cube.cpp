@@ -1,10 +1,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "src/Cube/model/cube.h"
-#include "src/Color/color.h"
-#include "src/Cube/face/face.h"
 
 #include <iostream>
 #include <string>
+#include <cctype>
+#include <stdexcept>
 
 #include <glm/gtx/rotate_vector.hpp>
 
@@ -221,6 +221,129 @@ void Cube::rotate(Axis axis, int layer, int dir) {
 
         piece.rotate(STATE.N, axis, dir);
     }
+}
+
+void Cube::move(std::string moveStr) {
+    Move move;
+
+    int N = STATE.N;
+
+    int width = 1;
+    size_t pos = 0;
+
+    //--------------------------------------------------
+    // width
+    //--------------------------------------------------
+
+    if (std::isdigit(moveStr[0])) {
+        while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
+        
+        width = std::stoi(moveStr.substr(0, pos));
+    }
+
+    //--------------------------------------------------
+    // face
+    //--------------------------------------------------
+
+    char c = moveStr[pos++];
+    bool lower = std::islower(c);
+    c = std::toupper(c);
+
+    //--------------------------------------------------
+    // wide
+    //--------------------------------------------------
+
+    bool wide = false;
+
+    if (pos < moveStr.size() && moveStr[pos] == 'w') {
+        wide = true;
+        pos++;
+    }
+
+    //--------------------------------------------------
+    // amount
+    //--------------------------------------------------
+
+    int amount = 1;
+
+    size_t amountStartPos = pos;
+
+    if (std::isdigit(moveStr[pos])) {
+        while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
+        amount = std::stoi(moveStr.substr(amountStartPos, pos));
+    }
+
+    if (pos < moveStr.size() && moveStr[pos] == '\'') {
+        amount = -1 * amount;
+    }
+    
+    //--------------------------------------------------
+    // build Move
+    //--------------------------------------------------
+
+    switch (c){
+        case 'R':
+            move = { Axis::X, N - width, ( wide != 0 ) ? width : 1, amount };
+            break;
+
+        case 'L':
+            move = { Axis::X, width - 1, (wide != 0) ? -width : 1, -amount };
+            break;
+
+        case 'U':
+            move = { Axis::Y, N - width, (wide != 0) ? width : 1, amount };
+            break;
+
+        case 'D':
+            move = { Axis::Y, width - 1, (wide != 0) ? -width : 1, -amount };
+            break;
+
+        case 'F':
+            move = { Axis::Z, N - width, (wide != 0) ? width : 1, amount };
+            break;
+
+        case 'B':
+            move = { Axis::Z, width - 1, (wide != 0) ? -width : 1, -amount };
+            break;
+        // special move (M, E, S)
+        case 'M':
+            move = { Axis::X, 1, N - 2, -amount };
+            break;
+        case 'E':
+            move = { Axis::Y, 1, N - 2, -amount };
+            break;
+        case 'S':
+            move = { Axis::Z, 1, N - 2, amount };
+            break;
+
+        default:
+            throw std::runtime_error("Invalid move");
+    }
+
+    const char* axisName[] = { "X", "Y", "Z" };
+
+    using namespace std;
+    cout << "move[ Axis::" << axisName[(int)move.axis] << ", layer: " << move.layer << ", width: " << move.width << ", amout: " << move.amount << "]" << endl;
+
+    applyMove(move);
+}
+
+void Cube::moves(std::vector<std::string>& moveStrs) {
+    for (std::string& moveStr : moveStrs) {
+        Cube::move(moveStr);
+    }
+}
+
+void Cube::applyMove(const Move& move){
+    int i = 0;
+    while (move.layer + i >= 0 && move.layer + i < STATE.N && abs(i) < abs(move.width)) {
+        for (int j = 0; j < abs(move.amount); j++) {
+            rotate(move.axis, move.layer + i, (move.amount > 0 ? 1 : move.amount < 0 ? -1 : 0));
+        }
+        i += move.width > 1 ? 1 : move.width < -1 ? -1 : STATE.N;
+    }
+
+    syncToCubelets();
 }
 
 // ===========================
