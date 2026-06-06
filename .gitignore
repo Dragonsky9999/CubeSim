@@ -1,0 +1,34 @@
+# build outputs
+out/
+build/
+cmake-build*/
+x64-Debug/
+x64-Release/
+
+# compiled files
+*.exe
+*.o
+*.obj
+*.a
+*.lib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.sln
+*.vcxproj*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
