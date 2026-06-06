@@ -1,5 +1,5 @@
 #define GLFW_INCLUDE_NONE
-#include "renderer.h"
+#include "src/renderer/renderer.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>

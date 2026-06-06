@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "src/Cube/cubePiece.h"
+#include "src/Cube/core/cubePiece.h"
 
 struct CubeState {
     unsigned int N;

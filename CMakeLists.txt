@@ -13,12 +13,13 @@ find_package(glm CONFIG REQUIRED)
 
 add_executable(CubeSim
     src/main.cpp
-    src/renderer/renderer.cpp
-    src/Cube/cube.cpp
-    src/Cube/cubeState.cpp
-    src/Cube/cubePiece.cpp
-    src/color/color.cpp
+    src/Cube/model/cube.cpp
+    src/Cube/core/cubeState.cpp
+    src/Cube/core/cubePiece.cpp
     src/Cube/face/face.cpp
+    src/renderer/renderer.cpp
+    src/color/color.cpp
+    
 )
 
 target_link_libraries(CubeSim PRIVATE

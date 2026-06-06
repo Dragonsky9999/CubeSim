@@ -1,4 +1,4 @@
-#include "src/Cube/cubeState.h"
+#include "src/Cube/core/cubeState.h"
 
 #include <string>
 

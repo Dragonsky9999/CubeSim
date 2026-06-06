@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
-#include "./src/color/color.h"
+#include "src/color/color.h"
 
 struct Cubelet {
 	glm::vec3 pos;

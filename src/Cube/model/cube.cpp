@@ -1,5 +1,5 @@
 #define GLM_ENABLE_EXPERIMENTAL
-#include "src/Cube/cube.h"
+#include "src/Cube/model/cube.h"
 #include "src/Color/color.h"
 #include "src/Cube/face/face.h"
 
@@ -8,6 +8,45 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 
+// init
+Cube::Cube(int n): STATE(n) {
+        STATE.initCube();
+		FACE_COLORS[0] = COLOR::White;
+		FACE_COLORS[1] = COLOR::Yellow;
+		FACE_COLORS[2] = COLOR::Green;
+		FACE_COLORS[3] = COLOR::Blue;
+		FACE_COLORS[4] = COLOR::Red;
+		FACE_COLORS[5] = COLOR::Orange;
+}
+
+static int normal_to_face(const glm::vec3& n) {
+    if (n.x > 0.5f) return getIndex(Face::R);
+    if (n.x < -0.5f) return getIndex(Face::L);
+    if (n.y > 0.5f) return getIndex(Face::U);
+    if (n.y < -0.5f) return getIndex(Face::D);
+    if (n.z > 0.5f) return getIndex(Face::F);
+    if (n.z < -0.5f) return getIndex(Face::B);
+    return -1;
+}
+
+// ==================
+// get original State
+// ==================
+
+const int Cube::getN() const{
+    return STATE.N;
+}
+const CubeState& Cube::getState() const{
+    return STATE;
+}
+const std::vector<Cubelet>& Cube::getCubelets() const{
+    return CUBELETS;
+}
+// ==================
+
+// ======================
+// show state on terminal
+// ======================
 static std::string getPiecesInfo(const std::vector<Piece>& pieces) {
     std::string s;
     
@@ -45,38 +84,6 @@ static std::string getCubeletsInfo(const std::vector<Cubelet>& cubelets) {
     return s;
 }
 
-glm::vec3 compute_axis(const std::vector<glm::vec3>& orig_normals) {
-    glm::vec3 sum = { 0, 0, 0 };
-    for (const auto& n : orig_normals) sum += n;
-    if (glm::length(sum) < 0.001f) return { 0, 1, 0 };
-    return glm::normalize(sum);
-}
-
-glm::vec3 rotate_vec(const glm::vec3& v, const glm::vec3& axis, float angle) {
-    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), angle, axis);
-    return glm::round(glm::vec3(rot * glm::vec4(v, 0.0f)));
-}
-
-int normal_to_face(const glm::vec3& n) {
-    if (n.x > 0.5f) return getIndex(Face::R);
-    if (n.x < -0.5f) return getIndex(Face::L);
-    if (n.y > 0.5f) return getIndex(Face::U);
-    if (n.y < -0.5f) return getIndex(Face::D);
-    if (n.z > 0.5f) return getIndex(Face::F);
-    if (n.z < -0.5f) return getIndex(Face::B);
-    return -1;
-}
-
-Cube::Cube(int n): STATE(n) {
-        STATE.initCube();
-		FACE_COLORS[0] = COLOR::White;
-		FACE_COLORS[1] = COLOR::Yellow;
-		FACE_COLORS[2] = COLOR::Green;
-		FACE_COLORS[3] = COLOR::Blue;
-		FACE_COLORS[4] = COLOR::Red;
-		FACE_COLORS[5] = COLOR::Orange;
-}
-
 void Cube::showCubePieces() {
     std::string s =
         "CubePieces(N=" + std::to_string(STATE.N) +
@@ -92,6 +99,15 @@ void Cube::showCubelets() {
         ", count=" + std::to_string(CUBELETS.size()) +
         ", pieces=[\n" + getCubeletsInfo(CUBELETS) + "]";
     std::cout << s << std::endl;
+}
+// ===========================
+
+
+// ===========================
+// change state
+// ===========================
+void Cube::setPieces(std::vector<Piece> PIECES) {
+    STATE.pieces = PIECES;
 }
 
 void Cube::syncToCubelets() {
@@ -119,7 +135,6 @@ void Cube::syncToCubelets() {
 
         std::vector<glm::vec3> curr_normals;
 
-        float rotation_unit;
 
         if (orig_x == 0)            { orig_normals.push_back({ -1, 0, 0 }); orig_colors.push_back(toRGBA(FACE_COLORS[(int)Face::L])); }
         if (orig_x == STATE.N - 1)  { orig_normals.push_back({ 1, 0, 0 });  orig_colors.push_back(toRGBA(FACE_COLORS[(int)Face::R])); }
@@ -200,16 +215,12 @@ void Cube::syncToCubelets() {
     }
 }
 
-void Cube::setPieces(std::vector<Piece> PIECES) {
-    STATE.pieces = PIECES;
+void Cube::rotate(Axis axis, int layer, int dir) {
+    for (Piece& piece : STATE.pieces) {
+        if (piece.gridPos[(int)axis] != layer) continue;
+
+        piece.rotate(STATE.N, axis, dir);
+    }
 }
 
-const int Cube::getN() const{
-    return STATE.N;
-}
-const CubeState& Cube::getState() const{
-    return STATE;
-}
-const std::vector<Cubelet>& Cube::getCubelets() const{
-    return CUBELETS;
-}
+// ===========================

@@ -2,7 +2,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "src/Cube/cube.h"
+#include "src/Cube/model/cube.h"
 #include "src/renderer/renderer.h"
 #include <iostream>
 int main() {
@@ -17,13 +17,10 @@ int main() {
 
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-    Cube cube(1); 
-    cube.setPieces({
-        Piece(0,"corner", 0,0,0,0)
-        });
+    Cube cube(3); 
+   
     cube.syncToCubelets();
-
-
+    
     initRenderer(window);
 
     while (!glfwWindowShouldClose(window)) {
