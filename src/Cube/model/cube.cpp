@@ -9,6 +9,8 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 
+using namespace std;
+
 // init
 Cube::Cube(int n): STATE(n) {
         STATE.initCube();
@@ -34,7 +36,7 @@ static int normal_to_face(const glm::vec3& n) {
 // get original State
 // ==================
 
-const int Cube::getN() const{
+int Cube::getN() const{
     return STATE.N;
 }
 const CubeState& Cube::getState() const{
@@ -85,7 +87,7 @@ static std::string getCubeletsInfo(const std::vector<Cubelet>& cubelets) {
     return s;
 }
 
-void Cube::showCubePieces() {
+void Cube::showCubePieces() const{
     std::string s =
         "CubePieces(N=" + std::to_string(STATE.N) +
         ", count=" + std::to_string(STATE.pieces.size()) +
@@ -94,7 +96,7 @@ void Cube::showCubePieces() {
     std::cout << s << std::endl;
 }
 
-void Cube::showCubelets() {
+void Cube::showCubelets() const{
     std::string s =
         "CubeLets(N=" + std::to_string(STATE.N) +
         ", count=" + std::to_string(CUBELETS.size()) +
@@ -107,7 +109,13 @@ void Cube::showCubelets() {
 // ===========================
 // change state
 // ===========================
-void Cube::setPieces(std::vector<Piece> PIECES) {
+Cube& Cube::operator<<(const string& moves)
+{
+    move(moves);
+    return *this;
+}
+
+void Cube::setPieces(const std::vector<Piece>& PIECES) {
     STATE.pieces = PIECES;
 }
 
@@ -206,17 +214,13 @@ void Cube::syncToCubelets() {
                 std::cout << orig_colors[i].x << std::endl;
                 cubelet.color[i] = orig_colors[i];
             }
-                    
-
-
         }
         
-
         CUBELETS.push_back(cubelet);
     }
 }
 
-void Cube::rotate(Axis axis, int layer, int dir) {
+void Cube::rotateLayer(Axis axis, int layer, int dir) {
     for (Piece& piece : STATE.pieces) {
         if (piece.gridPos[(int)axis] != layer) continue;
 
@@ -224,68 +228,82 @@ void Cube::rotate(Axis axis, int layer, int dir) {
     }
 }
 
-void Cube::move(std::string moveStr) {
-    Move move;
+void Cube::executeMove(const Move& move) {
+    int minLayer = std::min(move.startLayer, move.endLayer);
+    int maxLayer = std::max(move.startLayer, move.endLayer);
 
-    int N = STATE.N;
-
-    int depth = 1;
-    size_t pos = 0;
-
-    //--------------------------------------------------
-    // width
-    //--------------------------------------------------
-
-    if (std::isdigit(moveStr[0])) {
-        while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
-        
-        depth = std::stoi(moveStr.substr(0, pos));
+    for (int layer = minLayer; layer <= maxLayer; layer++) {
+        for (int i = 0; i < abs(move.amount); i++) {
+            rotateLayer(move.axis, layer, move.dir);
+        }
     }
+}
 
-    //--------------------------------------------------
-    // face
-    //--------------------------------------------------
+void Cube::move(const std::string& moveStrs) {
+    std::stringstream ss(moveStrs);
+    std::string moveStr;
 
-    char c = moveStr[pos++];
-    bool lower = std::islower(c);
-    c = std::toupper(c);
+    while (ss >> moveStr) {
+        Move move;
+        int N = STATE.N;
 
-    //--------------------------------------------------
-    // wide
-    //--------------------------------------------------
+        int depth = 1;
+        size_t pos = 0;
 
-    bool wide = false;
+        //--------------------------------------------------
+        // width
+        //--------------------------------------------------
 
-    if (pos < moveStr.size() && moveStr[pos] == 'w') {
-        wide = true;
-        pos++;
-    }
+        if (std::isdigit(moveStr[0])) {
+            while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
 
-    //--------------------------------------------------
-    // amount/dir
-    //--------------------------------------------------
+            depth = std::stoi(moveStr.substr(0, pos));
+        }
 
-    int amount = 1;
-    int dir = 1;
+        //--------------------------------------------------
+        // face
+        //--------------------------------------------------
 
-    size_t amountStartPos = pos;
+        char c = moveStr[pos++];
+        bool lower = std::islower(c);
+        c = std::toupper(c);
 
-    if (std::isdigit(moveStr[pos])) {
-        while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
-        amount = std::stoi(moveStr.substr(amountStartPos, pos - amountStartPos));
-    }
+        //--------------------------------------------------
+        // wide
+        //--------------------------------------------------
 
-    if (pos < moveStr.size() && moveStr[pos] == '\'') {
-        dir = -1;
-    }
-    
-    //--------------------------------------------------
-    // build Move
-    //--------------------------------------------------
+        bool wide = false;
 
-    switch (c){
+        if (pos < moveStr.size() && moveStr[pos] == 'w') {
+            wide = true;
+            pos++;
+        }
+
+        //--------------------------------------------------
+        // amount/dir
+        //--------------------------------------------------
+
+        int amount = 1;
+        int dir = 1;
+
+        size_t amountStartPos = pos;
+
+        if (std::isdigit(moveStr[pos])) {
+            while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
+            amount = std::stoi(moveStr.substr(amountStartPos, pos - amountStartPos));
+        }
+
+        if (pos < moveStr.size() && moveStr[pos] == '\'') {
+            dir = -1;
+        }
+
+        //--------------------------------------------------
+        // build Move
+        //--------------------------------------------------
+
+        switch (c) {
         case 'R':
-            move = { Axis::X, N - depth, (wide == true) ?  N - 1: N - depth, amount, dir };
+            move = { Axis::X, N - depth, (wide == true) ? N - 1 : N - depth, amount, dir };
             break;
 
         case 'L':
@@ -307,7 +325,7 @@ void Cube::move(std::string moveStr) {
         case 'B':
             move = { Axis::Z, depth - 1, (wide == true) ? 0 : depth - 1, amount, -dir };
             break;
-        // special move (M, E, S)
+            // special move (M, E, S)
         case 'M':
             move = { Axis::X, 1, N - 2, amount, -dir };
             break;
@@ -320,29 +338,8 @@ void Cube::move(std::string moveStr) {
 
         default:
             throw std::runtime_error("Invalid move");
-    }
-
-    applyMove(move);
-}
-
-void Cube::moves(const std::string& moveStrs) {
-    std::stringstream ss(moveStrs);
-
-    std::string moveStr;
-    while (ss >> moveStr) {
-        move(moveStr);
-    }
-}
-
-void Cube::applyMove(const Move& move){
-    int minLayer = std::min(move.startLayer, move.endLayer);
-    int maxLayer = std::max(move.startLayer, move.endLayer);
-
-    for (int layer = minLayer; layer <= maxLayer; layer++) {
-        for (int i = 0; i < abs(move.amount); i++) {
-            rotate(move.axis, layer, move.dir);
         }
+        executeMove(move);
     }
 }
-
 // ===========================

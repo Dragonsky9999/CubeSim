@@ -9,30 +9,29 @@
 #include "src/Cube/face/face.h"
 #include "src/Cube/Move/move.h"
 
-
 class Cube {
 private:
     COLOR FACE_COLORS[6];
     CubeState STATE;
     std::vector<Cubelet> CUBELETS;
 
-    void applyMove(const Move& move);
+    void executeMove(const Move& move);
+    void rotateLayer(Axis axis, int layer, int dir);
 public:
     Cube(int n = 3);
 
     // get original state
-    const int getN() const;
+    int getN() const;
     const CubeState& getState() const;
     const std::vector<Cubelet>& getCubelets() const;
 
     // show state on terminal
-    void showCubePieces();
-    void showCubelets();
+    void showCubePieces() const;
+    void showCubelets() const;
 
     // change state
-    void setPieces(std::vector<Piece> PIECES);
+    void setPieces(const std::vector<Piece>& PIECES);    
+    Cube& operator<<(const std::string& moves);
+    void move(const std::string& moveStrs);
     void syncToCubelets();
-    void rotate(Axis axis, int layer, int dir);
-    void move(std::string moveStr);
-    void moves(const std::string& moveStrs);
 };
