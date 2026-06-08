@@ -4,7 +4,8 @@
 
 struct Move {
     Axis axis;
-    int layer;
-    int width;
+    int startLayer;
+    int endLayer;
     int amount;
+    int dir;
 };

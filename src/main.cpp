@@ -6,7 +6,11 @@
 #include "src/renderer/renderer.h"
 #include <iostream>
 
+#include <filesystem>
 int main() {
+
+    std::cout << std::filesystem::current_path() << std::endl;
+
     glfwInit();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -19,11 +23,11 @@ int main() {
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
     Cube cube(5); 
-    int N = cube.getN();
-    std::vector<std::string> moves;
+    
+    cube.moves("F U' B L U' F2 U2 F U F' U2 D' B D L2 B2 U 2Fw 2Uw' 2Bw 2Lw 2Uw' 2Fw2 2Uw2 2Fw 2Uw 2Fw' 2Uw2 2Dw' 2Bw 2Dw 2Lw2 2Bw2 2Uw");
+    
+    cube.syncToCubelets();
 
-    moves = { "F", "U'", }; //"B", "L", "U'", "F2", "U2", "F", "U", "F'", "U2", "D'", "B", "D", "L2", "B2", "U" }; // "Fw2", "Uw'", "Bw", "Lw", "Uw'", "Fw2", "Uw2", "Fw'", "Uw2", "Dw'", "Bw", "Dw", "Lw2", "Bw2", "Uw" };
-    cube.moves(moves);
 
     initRenderer(window);
 

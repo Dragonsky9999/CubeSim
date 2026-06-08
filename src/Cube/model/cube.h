@@ -34,5 +34,5 @@ public:
     void syncToCubelets();
     void rotate(Axis axis, int layer, int dir);
     void move(std::string moveStr);
-    void moves(std::vector<std::string>& moveStrs);
+    void moves(const std::string& moveStrs);
 };

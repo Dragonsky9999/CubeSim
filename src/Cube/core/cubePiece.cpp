@@ -45,13 +45,12 @@ void Piece::rotate(int N, Axis axis, int dir) {
 
     // corner
     if (type == "corner") {
-    int parity = cornerChirality(gridPos, N);
-        if (axis == Axis::Y) {
-            
-        }else if (axis == Axis::X) {
-            ori = (ori + (dir == 1 ? 1 : 2) + parity) % 3;
-        }else {
-            ori = (ori + (dir == 1 ? 2 : 1) + parity) % 3;
+    int chirality = cornerChirality(gridPos, N);
+    
+        if (axis == Axis::X) {
+            ori = (ori + (chirality == 0 ? 1 : 2)) % 3;
+        }else if (axis == Axis::Z) {
+            ori = (ori + (chirality == 0 ? 2 : 1)) % 3;
         }
     }
 }

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <cctype>
+#include <sstream>
 #include <stdexcept>
 
 #include <glm/gtx/rotate_vector.hpp>
@@ -228,7 +229,7 @@ void Cube::move(std::string moveStr) {
 
     int N = STATE.N;
 
-    int width = 1;
+    int depth = 1;
     size_t pos = 0;
 
     //--------------------------------------------------
@@ -238,7 +239,7 @@ void Cube::move(std::string moveStr) {
     if (std::isdigit(moveStr[0])) {
         while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
         
-        width = std::stoi(moveStr.substr(0, pos));
+        depth = std::stoi(moveStr.substr(0, pos));
     }
 
     //--------------------------------------------------
@@ -261,20 +262,21 @@ void Cube::move(std::string moveStr) {
     }
 
     //--------------------------------------------------
-    // amount
+    // amount/dir
     //--------------------------------------------------
 
     int amount = 1;
+    int dir = 1;
 
     size_t amountStartPos = pos;
 
     if (std::isdigit(moveStr[pos])) {
         while (pos < moveStr.size() && std::isdigit(moveStr[pos])) pos++;
-        amount = std::stoi(moveStr.substr(amountStartPos, pos));
+        amount = std::stoi(moveStr.substr(amountStartPos, pos - amountStartPos));
     }
 
     if (pos < moveStr.size() && moveStr[pos] == '\'') {
-        amount = -1 * amount;
+        dir = -1;
     }
     
     //--------------------------------------------------
@@ -283,67 +285,64 @@ void Cube::move(std::string moveStr) {
 
     switch (c){
         case 'R':
-            move = { Axis::X, N - width, ( wide != 0 ) ? width : 1, amount };
+            move = { Axis::X, N - depth, (wide == true) ?  N - 1: N - depth, amount, dir };
             break;
 
         case 'L':
-            move = { Axis::X, width - 1, (wide != 0) ? -width : 1, -amount };
+            move = { Axis::X, depth - 1, (wide == true) ? 0 : depth - 1, amount, -dir };
             break;
 
         case 'U':
-            move = { Axis::Y, N - width, (wide != 0) ? width : 1, amount };
+            move = { Axis::Y, N - depth, (wide == true) ? N - 1 : N - depth, amount, dir };
             break;
 
         case 'D':
-            move = { Axis::Y, width - 1, (wide != 0) ? -width : 1, -amount };
+            move = { Axis::Y, depth - 1, (wide == true) ? 0 : depth - 1, amount, -dir };
             break;
 
         case 'F':
-            move = { Axis::Z, N - width, (wide != 0) ? width : 1, amount };
+            move = { Axis::Z, N - depth, (wide == true) ? N - 1 : N - depth, amount, dir };
             break;
 
         case 'B':
-            move = { Axis::Z, width - 1, (wide != 0) ? -width : 1, -amount };
+            move = { Axis::Z, depth - 1, (wide == true) ? 0 : depth - 1, amount, -dir };
             break;
         // special move (M, E, S)
         case 'M':
-            move = { Axis::X, 1, N - 2, -amount };
+            move = { Axis::X, 1, N - 2, amount, -dir };
             break;
         case 'E':
-            move = { Axis::Y, 1, N - 2, -amount };
+            move = { Axis::Y, 1, N - 2, amount, -dir };
             break;
         case 'S':
-            move = { Axis::Z, 1, N - 2, amount };
+            move = { Axis::Z, 1, N - 2, amount, dir };
             break;
 
         default:
             throw std::runtime_error("Invalid move");
     }
 
-    const char* axisName[] = { "X", "Y", "Z" };
-
-    using namespace std;
-    cout << "move[ Axis::" << axisName[(int)move.axis] << ", layer: " << move.layer << ", width: " << move.width << ", amout: " << move.amount << "]" << endl;
-
     applyMove(move);
 }
 
-void Cube::moves(std::vector<std::string>& moveStrs) {
-    for (std::string& moveStr : moveStrs) {
-        Cube::move(moveStr);
+void Cube::moves(const std::string& moveStrs) {
+    std::stringstream ss(moveStrs);
+
+    std::string moveStr;
+    while (ss >> moveStr) {
+        move(moveStr);
     }
 }
 
 void Cube::applyMove(const Move& move){
-    int i = 0;
-    while (move.layer + i >= 0 && move.layer + i < STATE.N && abs(i) < abs(move.width)) {
-        for (int j = 0; j < abs(move.amount); j++) {
-            rotate(move.axis, move.layer + i, (move.amount > 0 ? 1 : move.amount < 0 ? -1 : 0));
-        }
-        i += move.width > 1 ? 1 : move.width < -1 ? -1 : STATE.N;
-    }
+    int minLayer = std::min(move.startLayer, move.endLayer);
+    int maxLayer = std::max(move.startLayer, move.endLayer);
 
-    syncToCubelets();
+    for (int layer = minLayer; layer <= maxLayer; layer++) {
+        for (int i = 0; i < abs(move.amount); i++) {
+            rotate(move.axis, layer, move.dir);
+        }
+    }
 }
 
 // ===========================
