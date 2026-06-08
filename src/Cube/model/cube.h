@@ -20,18 +20,22 @@ private:
 public:
     Cube(int n = 3);
 
-    // get original state
+    // state access
     int getN() const;
     const CubeState& getState() const;
     const std::vector<Cubelet>& getCubelets() const;
 
-    // show state on terminal
+    // debug
     void showCubePieces() const;
     void showCubelets() const;
 
-    // change state
+    // mutation
     void setPieces(const std::vector<Piece>& PIECES);    
+
+    // input system
     Cube& operator<<(const std::string& moves);
     void move(const std::string& moveStrs);
+
+    // sync layer
     void syncToCubelets();
 };

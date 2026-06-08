@@ -22,7 +22,7 @@ int main() {
 
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-    Cube cube; 
+    Cube cube(50); 
     
     cube.syncToCubelets();
 
