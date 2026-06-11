@@ -198,36 +198,56 @@ static void addFace(std::vector<Vertex>& v,
 // =======================================================
 // render
 // =======================================================
-void renderCubelets(const std::vector<Cubelet>& cubelets, int N) {
+void renderCubelets(const std::vector<Cubelet>& cubelets, const int N) {
 
-    std::vector<Vertex> vertices;
-    vertices.reserve(cubelets.size() * 36);
-
-    // ===================================================
-    // 🎯 camera distance (N adaptive)
-    // ===================================================
+    
     float halfExtent = (N - 1) * 0.5f;
     float radius = halfExtent * std::sqrt(3.0f);
-
     float minDist = 0.0001f;
     float maxDist = radius * 6.0f;
     float baseDist = radius * 2.8f;
 
-    // 初期距離同期
-    if (distanceCam < 0.0001f)
+    if (distanceCam < 0.0001f) {
         distanceCam = baseDist;
+        targetDistance = baseDist;
+    }
 
-    // clamp target
     targetDistance = std::clamp(targetDistance, minDist, maxDist);
-
-    // smooth zoom
     distanceCam += (targetDistance - distanceCam) * 0.15f;
 
+    // カメラ行列
+    glm::vec3 center(0.0f);
+    glm::vec3 camDir = camRot * glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 camUp = camRot * glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 eye = center + camDir * distanceCam;
+
+    glm::mat4 view = glm::lookAt(eye, center, camUp);
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f),
+        1280.0f / 720.0f, 0.1f, 100.0f);
+
+    
+    glUseProgram(shaderProgram);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
+        sizeof(Vertex), (void*)offsetof(Vertex, color));
+    glEnableVertexAttribArray(1);
+
     float h = 0.475f;
+    float offset = (N - 1) / 2.0f;
 
     for (const Cubelet& c : cubelets) {
 
-        glm::vec3 p = c.pos;
+        glm::vec3 p = glm::vec3(c.gridPos) - glm::vec3(offset, offset, offset);
 
         glm::vec3 v000 = p + glm::vec3(-h, -h, -h);
         glm::vec3 v001 = p + glm::vec3(-h, -h, +h);
@@ -238,57 +258,25 @@ void renderCubelets(const std::vector<Cubelet>& cubelets, int N) {
         glm::vec3 v110 = p + glm::vec3(+h, +h, -h);
         glm::vec3 v111 = p + glm::vec3(+h, +h, +h);
 
+        std::vector<Vertex> vertices;
+        vertices.reserve(36);
+
         addFace(vertices, v011, v111, v110, v010, c.color[0]);
         addFace(vertices, v000, v100, v101, v001, c.color[1]);
         addFace(vertices, v001, v101, v111, v011, c.color[2]);
         addFace(vertices, v110, v100, v000, v010, c.color[3]);
         addFace(vertices, v101, v100, v110, v111, c.color[4]);
         addFace(vertices, v000, v001, v011, v010, c.color[5]);
+
+        glBufferData(GL_ARRAY_BUFFER,
+            vertices.size() * sizeof(Vertex),
+            vertices.data(),
+            GL_DYNAMIC_DRAW);
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(c.transform));
+
+        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices.size());
     }
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    glBufferData(GL_ARRAY_BUFFER,
-        vertices.size() * sizeof(Vertex),
-        vertices.data(),
-        GL_DYNAMIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex),
-        (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(1);
-
-    glUseProgram(shaderProgram);
-
-    // ===================================================
-    // camera
-    // ===================================================
-    glm::vec3 center(0.0f);
-
-    glm::vec3 camDir = camRot * glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 camUp = camRot * glm::vec3(0.0f, 1.0f, 0.0f);
-
-    glm::vec3 eye = center + camDir * distanceCam;
-
-    glm::mat4 view = glm::lookAt(eye, center, camUp);
-
-    glm::mat4 projection =
-        glm::perspective(glm::radians(45.0f),
-            1280.0f / 720.0f,
-            0.1f,
-            100.0f);
-
-    glm::mat4 model(1.0f);
-
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices.size());
 }
 
 // =======================================================

@@ -9,7 +9,10 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 
-using namespace std;
+float timer = 0.0f;
+float duration = 0.8f;
+
+using std::cout, std::cin;
 
 // init
 Cube::Cube(int n): STATE(n) {
@@ -45,6 +48,9 @@ const CubeState& Cube::getState() const{
 const std::vector<Cubelet>& Cube::getCubelets() const{
     return CUBELETS;
 }
+const optional<Rotation>& Cube::getRotation() const {
+    return ROTATION;
+}
 // ==================
 
 // ======================
@@ -71,9 +77,9 @@ static std::string getCubeletsInfo(const std::vector<Cubelet>& cubelets) {
 
     for (const auto& cubelet : cubelets) {
         s += "pos: (" +
-			    std::to_string(cubelet.pos[0]) + ", " + 
-			    std::to_string(cubelet.pos[1]) + ", " + 
-			    std::to_string(cubelet.pos[2]) + 
+			    std::to_string(cubelet.gridPos[0]) + ", " + 
+			    std::to_string(cubelet.gridPos[1]) + ", " + 
+			    std::to_string(cubelet.gridPos[2]) + 
             ")" + "," +
             "colors: [" +
 			    "rgb(" + std::to_string(cubelet.color[0][0]) + ", " + std::to_string(cubelet.color[0][1]) + ", " + std::to_string(cubelet.color[0][2]) + "), " +
@@ -86,6 +92,7 @@ static std::string getCubeletsInfo(const std::vector<Cubelet>& cubelets) {
     }
     return s;
 }
+
 
 void Cube::showCubePieces() const{
     std::string s =
@@ -126,15 +133,11 @@ void Cube::syncToCubelets() {
         // Skinp inner pieces (not visible)
         if (piece.gridPos[0] != 0 && piece.gridPos[0] != STATE.N - 1 && piece.gridPos[1] != 0 && piece.gridPos[1] != STATE.N - 1 &&piece.gridPos[2] != 0 && piece.gridPos[2] != STATE.N - 1) continue;
 
-        // cubelet is for rendering
-        Cubelet cubelet;
-
         // Set position based on piece pos
-		const float offset = (STATE.N - 1) / 2.0f;
-        const float x = piece.gridPos[0] - offset;
-		const float y = piece.gridPos[1] - offset;
-		const float z = piece.gridPos[2] - offset;
-        cubelet.pos = glm::vec3(x, y, z);
+        Cubelet cubelet;
+        cubelet.gridPos = glm::ivec3(piece.gridPos[0], piece.gridPos[1], piece.gridPos[2]);
+        cubelet.transform = glm::mat4(1.0f);
+        for (int i = 0; i < 6; i++) cubelet.color[i] = toRGBA(COLOR::Black);
 
         // Set colors based on piece type and pos/ori
         int orig_x = piece.id % STATE.N; int orig_y = (piece.id / STATE.N) % STATE.N; int orig_z = (piece.id / STATE.N / STATE.N);
@@ -339,7 +342,56 @@ void Cube::move(const std::string& moveStrs) {
         default:
             throw std::runtime_error("Invalid move");
         }
-        executeMove(move);
+
+        MOVE_QUEUE.push(move);
     }
 }
 // ===========================
+
+
+// update
+void Cube::update(float dt) {
+    if (!ROTATION) {
+
+        if (timer < duration) {
+            timer += dt;
+            return;
+        }
+        if (!MOVE_QUEUE.empty()) {
+            ROTATION.emplace(MOVE_QUEUE.front());
+            MOVE_QUEUE.pop();
+        }
+        else {
+            return;
+        }
+    }
+
+    ROTATION->update(dt);
+    timer += dt;
+
+    // --- 対象Cubeletのtransformを現在角度で更新 ---
+    const Move& m = ROTATION->move;
+    int minLayer = std::min(m.startLayer, m.endLayer);
+    int maxLayer = std::max(m.startLayer, m.endLayer);
+
+    glm::vec3 axisVec(0.0f);
+    axisVec[(int)m.axis] = 1.0f;
+
+    float angleDeg = ROTATION->currentAngle;
+    glm::mat4 animMat = glm::rotate(glm::mat4(1.0f), glm::radians(angleDeg), axisVec);
+
+    for (Cubelet& cubelet : CUBELETS) {
+        int layer = cubelet.gridPos[(int)m.axis];
+        if (layer >= minLayer && layer <= maxLayer) {
+            cubelet.transform = animMat;
+        }
+    }
+
+    // --- アニメ完了 ---
+    if (ROTATION->finished()) {
+        executeMove(m);
+        syncToCubelets();
+        ROTATION.reset();
+        timer = 0.0f;
+    }
+}
