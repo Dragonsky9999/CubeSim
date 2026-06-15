@@ -17,6 +17,8 @@
 #include <cmath>
 #include <algorithm>
 
+using std::cout, std::endl;
+
 // =======================================================
 // Vertex
 // =======================================================
@@ -198,82 +200,106 @@ static void addFace(std::vector<Vertex>& v,
 // =======================================================
 // render
 // =======================================================
-void renderCubelets(const std::vector<Cubelet>& cubelets, const int N) {
+void renderCubelets(const std::vector<Cubelet>& cubelets, const int N, const std::optional<Rotation>* rotationPtr) {
 
-    
     float halfExtent = (N - 1) * 0.5f;
     float radius = halfExtent * std::sqrt(3.0f);
     float minDist = 0.0001f;
     float maxDist = radius * 6.0f;
     float baseDist = radius * 2.8f;
 
-    if (distanceCam < 0.0001f) {
-        distanceCam = baseDist;
-        targetDistance = baseDist;
-    }
+    if (distanceCam < 0.0001f) { distanceCam = baseDist; targetDistance = baseDist; }
 
     targetDistance = std::clamp(targetDistance, minDist, maxDist);
     distanceCam += (targetDistance - distanceCam) * 0.15f;
 
-    // カメラ行列
     glm::vec3 center(0.0f);
-    glm::vec3 camDir = camRot * glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 camUp = camRot * glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 camDir = camRot * glm::vec3(0, 0, 1);
+    glm::vec3 camUp = camRot * glm::vec3(0, 1, 0);
     glm::vec3 eye = center + camDir * distanceCam;
 
     glm::mat4 view = glm::lookAt(eye, center, camUp);
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f),
-        1280.0f / 720.0f, 0.1f, 100.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 100.0f);
 
-    
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
 
-    
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex), (void*)offsetof(Vertex, color));
+
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
     glEnableVertexAttribArray(1);
 
+    bool hasRotation = false;
+    glm::mat4 rotMat(1.0f);
+    Axis rotAxis = Axis::X;
+    int minLayer = 0;
+    int maxLayer = 0;
+
+    if (rotationPtr && rotationPtr->has_value()) {
+        const Rotation& r = *(*rotationPtr);
+        const Move& m = r.move;
+
+        glm::vec3 axisVec(0.0f); axisVec[(int)m.axis] = 1.0f;
+
+        rotMat = glm::rotate(glm::mat4(1.0f), glm::radians(r.currentAngle), axisVec);
+
+        rotAxis = m.axis;
+        minLayer = std::min(m.startLayer, m.endLayer);
+        maxLayer = std::max(m.startLayer, m.endLayer);
+
+        hasRotation = true;
+    }
+
     float h = 0.475f;
-    float offset = (N - 1) / 2.0f;
+    float offset = (N - 1) * 0.5f;
 
     for (const Cubelet& c : cubelets) {
 
-        glm::vec3 p = glm::vec3(c.gridPos) - glm::vec3(offset, offset, offset);
+        glm::vec3 basePos = glm::vec3(c.gridPos) - glm::vec3(offset);
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), basePos);
 
-        glm::vec3 v000 = p + glm::vec3(-h, -h, -h);
-        glm::vec3 v001 = p + glm::vec3(-h, -h, +h);
-        glm::vec3 v010 = p + glm::vec3(-h, +h, -h);
-        glm::vec3 v011 = p + glm::vec3(-h, +h, +h);
-        glm::vec3 v100 = p + glm::vec3(+h, -h, -h);
-        glm::vec3 v101 = p + glm::vec3(+h, -h, +h);
-        glm::vec3 v110 = p + glm::vec3(+h, +h, -h);
-        glm::vec3 v111 = p + glm::vec3(+h, +h, +h);
+        if (hasRotation) {
+            int layer = c.gridPos[(int)rotAxis];
+            if (layer >= minLayer && layer <= maxLayer) model = rotMat * model;
+        }
 
-        std::vector<Vertex> vertices;
-        vertices.reserve(36);
+        std::vector<Vertex> vertices; vertices.reserve(36);
 
-        addFace(vertices, v011, v111, v110, v010, c.color[0]);
+        glm::vec3 v000(-h, -h, -h);
+        glm::vec3 v001(-h, -h, h);
+        glm::vec3 v010(-h, h, -h);
+        glm::vec3 v011(-h, h, h);
+        glm::vec3 v100(h, -h, -h);
+        glm::vec3 v101(h, -h, h);
+        glm::vec3 v110(h, h, -h);
+        glm::vec3 v111(h, h, h);
+
+        // U (top)
+        addFace(vertices, v010, v110, v111, v011, c.color[0]);
+
+        // D (bottom)
         addFace(vertices, v000, v100, v101, v001, c.color[1]);
+
+        // F (front)
         addFace(vertices, v001, v101, v111, v011, c.color[2]);
+
+        // B (back)
         addFace(vertices, v110, v100, v000, v010, c.color[3]);
+
+        // R (right)
         addFace(vertices, v101, v100, v110, v111, c.color[4]);
+
+        // L (left)
         addFace(vertices, v000, v001, v011, v010, c.color[5]);
 
-        glBufferData(GL_ARRAY_BUFFER,
-            vertices.size() * sizeof(Vertex),
-            vertices.data(),
-            GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_DYNAMIC_DRAW);
 
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(c.transform));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertices.size());
     }

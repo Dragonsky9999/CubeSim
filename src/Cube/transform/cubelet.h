@@ -4,6 +4,5 @@
 
 struct Cubelet {
     glm::ivec3 gridPos;
-    glm::vec4 color[6];
-    glm::mat4 transform;
+    glm::vec4 color[6] = { toRGBA(COLOR::Black), toRGBA(COLOR::Black), toRGBA(COLOR::Black), toRGBA(COLOR::Black), toRGBA(COLOR::Black), toRGBA(COLOR::Black)};
 };

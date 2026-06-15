@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cmath>
+#include <iostream>
 #include "src/Axis/axis.h"
 #include "src/Cube/Move/move.h"
+
+using std::cout, std::endl;
 
 static float smoothstep(float x) {
 	return x * x * (3.0f - 2.0f * x);
@@ -13,7 +16,7 @@ class Rotation {
 		Move move;
 
 		float currentAngle = 0.0f;
-		float speed = 300.0f; 
+		float speed = 700.0f; 
 
 		float t = 0.0f;
 		float duration = 0.2f;
@@ -30,7 +33,7 @@ class Rotation {
 		}
 
 		float getTargetAngle() const {
-			return 90.0f * move.amount * move.dir;
+			return 90.0f * move.amount * std::abs(move.dir);
 		}
 
 		void update(float dt) {
@@ -39,7 +42,7 @@ class Rotation {
 
 			float eased = smoothstep(t);
 
-			currentAngle = eased * getTargetAngle();
+			currentAngle = -1 * eased * getTargetAngle() * move.dir;
 		}
 
 		bool finished() const {

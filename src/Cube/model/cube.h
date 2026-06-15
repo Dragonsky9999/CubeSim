@@ -32,7 +32,7 @@ public:
     int getN() const;
     const CubeState& getState() const;
     const vector<Cubelet>& getCubelets() const;
-    const optional<Rotation>& getRotation() const;
+    const optional<Rotation>* getRotation() const;
 
     // debug
     void showCubePieces() const;
